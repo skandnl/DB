@@ -33,6 +33,8 @@ sqlite3 outputs/cafe_order.sqlite < outputs/03_queries.sql
 
 ## 테이블 관계
 
+![Cafe Order Database ERD](db_diagram.png)
+
 - `customer(1) -> cafe_order(N)`
 - `cafe_order(1) -> order_item(N)`
 - `menu_category(1) -> menu_item(N)`
