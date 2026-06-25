@@ -110,6 +110,397 @@ cafe_order -> order_item -> menu_item
 | 결과 확인 자료 | `outputs/query_results/queries_result.txt`와 `outputs/query_results/screenshots/`에 저장 |
 | ERD 이미지 | `outputs/db_diagram.png` 생성 및 README에 표시 |
 
+## 평가기준표 충족 상세
+
+### 항목 1. 필수 산출물과 SQL 요구사항 충족
+
+#### 최소 4개 테이블이 존재하고, 각 테이블에 PK가 정의되어 있는가?
+
+충족했다. 이 프로젝트는 최소 요구사항인 4개보다 많은 5개 테이블을 사용한다.
+
+| 테이블 | PK 컬럼 | PK 정의 위치 |
+| --- | --- | --- |
+| `customer` | `customer_id` | `outputs/01_schema.sql` |
+| `menu_category` | `category_id` | `outputs/01_schema.sql` |
+| `menu_item` | `menu_item_id` | `outputs/01_schema.sql` |
+| `cafe_order` | `order_id` | `outputs/01_schema.sql` |
+| `order_item` | `order_item_id` | `outputs/01_schema.sql` |
+
+각 테이블의 PK는 아래와 같은 형태로 정의했다.
+
+```sql
+customer_id INTEGER PRIMARY KEY AUTOINCREMENT
+```
+
+`PRIMARY KEY`는 각 행을 구분하는 고유 번호라는 뜻이다. `AUTOINCREMENT`는 데이터를 넣을 때 번호를 직접 입력하지 않아도 SQLite가 자동으로 1, 2, 3처럼 증가시키는 기능이다.
+
+#### FK를 사용한 1:N 관계가 최소 2개 이상 존재하고, 없는 값 참조가 실제로 막히는가?
+
+충족했다. 최소 2개가 아니라 총 4개의 1:N 관계를 만들었다.
+
+| 1:N 관계 | FK 컬럼 | 의미 |
+| --- | --- | --- |
+| `customer(1) -> cafe_order(N)` | `cafe_order.customer_id` | 고객 한 명은 여러 번 주문할 수 있다. |
+| `cafe_order(1) -> order_item(N)` | `order_item.order_id` | 주문 한 건에는 여러 메뉴가 들어갈 수 있다. |
+| `menu_category(1) -> menu_item(N)` | `menu_item.category_id` | 카테고리 하나에는 여러 메뉴가 들어갈 수 있다. |
+| `menu_item(1) -> order_item(N)` | `order_item.menu_item_id` | 메뉴 하나는 여러 주문상세에 등장할 수 있다. |
+
+FK는 `outputs/01_schema.sql`에 아래처럼 정의되어 있다.
+
+```sql
+FOREIGN KEY (customer_id) REFERENCES customer(customer_id)
+FOREIGN KEY (category_id) REFERENCES menu_category(category_id)
+FOREIGN KEY (order_id) REFERENCES cafe_order(order_id) ON DELETE CASCADE
+FOREIGN KEY (menu_item_id) REFERENCES menu_item(menu_item_id)
+```
+
+SQLite에서 FK 검사가 실제로 동작하도록 모든 SQL 파일에 아래 설정을 넣었다.
+
+```sql
+PRAGMA foreign_keys = ON;
+```
+
+이 설정 때문에 존재하지 않는 `customer_id`, `category_id`, `order_id`, `menu_item_id`를 넣으려고 하면 SQLite가 입력을 막는다. 예를 들어 없는 고객 번호로 주문을 만들 수 없고, 없는 메뉴 번호로 주문상세를 만들 수 없다.
+
+#### 각 테이블에 최소 10행 이상의 샘플 데이터가 입력되어 있는가?
+
+충족했다. `outputs/02_insert_sample_data.sql`에 각 테이블별 샘플 데이터를 넣었다.
+
+| 테이블 | 샘플 데이터 수 | 충족 여부 |
+| --- | --- | --- |
+| `customer` | 10행 | 충족 |
+| `menu_category` | 10행 | 충족 |
+| `menu_item` | 12행 | 충족 |
+| `cafe_order` | 12행 | 충족 |
+| `order_item` | 20행 | 충족 |
+
+데이터는 FK 오류가 나지 않도록 부모 테이블을 먼저 넣고, 자식 테이블을 나중에 넣었다.
+
+```text
+customer, menu_category
+-> menu_item
+-> cafe_order
+-> order_item
+```
+
+예를 들어 `order_item`은 `order_id`와 `menu_item_id`를 참조하므로, 먼저 `cafe_order`와 `menu_item` 데이터가 존재해야 한다.
+
+#### 기본 조회, 조인, 집계, 서브쿼리, 수정/삭제, 인덱스를 포함한 쿼리 15개가 작성되어 있는가?
+
+충족했다. `outputs/03_queries.sql`에 총 15개 쿼리를 작성했다.
+
+| 분류 | 쿼리 번호 | 평가 기준 충족 내용 |
+| --- | --- | --- |
+| 기본 조회 4개 | Q01~Q04 | `WHERE`, `ORDER BY`, `LIMIT`, `LIKE`를 사용한 단일 테이블 조회 |
+| 조인 4개 | Q05~Q08 | `INNER JOIN` 3개, `LEFT JOIN` 1개 |
+| 집계 3개 | Q09~Q11 | `GROUP BY`, `SUM`을 사용한 주문별/메뉴별 집계 |
+| 추가 집계 함수 | Q08, Q12 | Q08에서 `COUNT`, Q12에서 `AVG` 사용 |
+| 서브쿼리 1개 | Q12 | 평균 메뉴 가격을 안쪽 쿼리로 구한 뒤 바깥 쿼리에서 비교 |
+| 수정/삭제 2개 | Q14~Q15 | `UPDATE`, `DELETE` 사용 |
+| 인덱스 1개 | Q13 | `CREATE INDEX`와 `EXPLAIN QUERY PLAN` 사용 |
+
+기본 조회는 다음 쿼리들이 담당한다.
+
+| 쿼리 | 사용 구문 | 충족 내용 |
+| --- | --- | --- |
+| Q01 | `WHERE`, `ORDER BY` | 특정 가입일 이후 고객을 최근순으로 조회 |
+| Q02 | `WHERE`, `ORDER BY`, `LIMIT` | 6000원 이상 메뉴 중 비싼 메뉴 5개 조회 |
+| Q03 | `WHERE`, `ORDER BY` | 완료된 주문만 최신순 조회 |
+| Q04 | `LIKE`, `ORDER BY` | 이름에 `Lee`가 포함된 고객 검색 |
+
+조인은 다음 쿼리들이 담당한다.
+
+| 쿼리 | JOIN 종류 | 연결 테이블 | 충족 내용 |
+| --- | --- | --- | --- |
+| Q05 | `INNER JOIN` | `cafe_order` + `customer` | 주문에 고객 이름을 붙임 |
+| Q06 | `INNER JOIN` | `order_item` + `menu_item` | 주문상세에 메뉴 이름을 붙임 |
+| Q07 | `INNER JOIN` | `menu_item` + `menu_category` | 메뉴의 카테고리를 조회 |
+| Q08 | `LEFT JOIN` | `customer` + `cafe_order` | 고객별 주문 횟수를 조회 |
+
+집계는 다음 쿼리들이 담당한다.
+
+| 쿼리 | 집계 함수 | `GROUP BY` 기준 | 충족 내용 |
+| --- | --- | --- | --- |
+| Q08 | `COUNT` | 고객별 | 고객별 주문 횟수 |
+| Q09 | `SUM` | 주문별 | 주문별 총금액 |
+| Q10 | `SUM` | 메뉴별 | 메뉴별 판매 수량 |
+| Q11 | `SUM` | 메뉴별 | 메뉴별 매출 |
+| Q12 | `AVG` | 전체 메뉴 | 평균 메뉴 가격보다 비싼 메뉴 조회 |
+
+Q12는 서브쿼리 조건도 만족한다.
+
+```sql
+WHERE price > (
+    SELECT AVG(price)
+    FROM menu_item
+)
+```
+
+안쪽 쿼리에서 평균 가격을 구하고, 바깥 쿼리에서 평균보다 비싼 메뉴만 조회한다.
+
+Q14와 Q15는 수정/삭제 조건을 만족한다.
+
+```sql
+UPDATE cafe_order
+SET order_status = 'COMPLETED'
+WHERE order_id = 6;
+```
+
+```sql
+DELETE FROM cafe_order
+WHERE order_id = 10 AND order_status = 'CANCELED';
+```
+
+Q13은 인덱스 조건을 만족한다.
+
+```sql
+CREATE INDEX IF NOT EXISTS idx_cafe_order_order_datetime
+ON cafe_order(order_datetime);
+```
+
+#### 각 쿼리의 실행 결과가 스크린샷 또는 텍스트로 첨부되어 있는가?
+
+충족했다. 실행 결과는 두 가지 형태로 저장했다.
+
+| 결과 자료 | 위치 | 설명 |
+| --- | --- | --- |
+| 텍스트 결과 | `outputs/query_results/queries_result.txt` | Q01~Q15의 실행 쿼리와 실행 결과 전체 |
+| 이미지 캡처 | `outputs/query_results/screenshots/` | `q01_result.png`부터 `q15_result.png`까지 쿼리별 캡처 |
+
+또한 `outputs/03_queries.sql`을 직접 실행하면 터미널에서도 아래 형식으로 나온다.
+
+```text
+Q01. 쿼리 설명
+실행 쿼리:
+SELECT ...
+실행 결과:
+결과 테이블
+```
+
+### 항목 2. 테이블 설계와 도메인 이해 설명
+
+#### 테이블을 왜 이렇게 나눴는지, 각 테이블의 역할을 말할 수 있는가?
+
+설명할 수 있다. 카페 주문이라는 도메인을 역할별로 나누어 저장했다.
+
+| 테이블 | 역할 | 나눈 이유 |
+| --- | --- | --- |
+| `customer` | 고객 정보 저장 | 주문자 정보를 주문마다 반복 저장하지 않기 위해 |
+| `menu_category` | 메뉴 분류 저장 | 메뉴를 커피, 라떼, 케이크처럼 묶기 위해 |
+| `menu_item` | 실제 메뉴 저장 | 메뉴 이름과 가격을 따로 관리하기 위해 |
+| `cafe_order` | 주문 한 건 저장 | 고객이 언제 주문했는지 주문 단위로 관리하기 위해 |
+| `order_item` | 주문상세 저장 | 주문 한 건 안에 여러 메뉴가 들어갈 수 있기 때문에 |
+
+엑셀처럼 모든 정보를 한 표에 넣으면 고객 이름, 메뉴 이름, 카테고리 이름이 계속 반복된다. 이 프로젝트에서는 반복되는 정보를 별도 테이블로 나누고, 필요한 순간에 JOIN으로 다시 연결한다.
+
+#### FK로 연결한 1:N 관계가 실제 도메인에서 어떤 의미인지 예시를 들어 보여줄 수 있는가?
+
+설명할 수 있다.
+
+| 관계 | 실제 예시 |
+| --- | --- |
+| `customer(1) -> cafe_order(N)` | `Kim Minjun` 고객이 1번 주문과 11번 주문을 할 수 있다. |
+| `cafe_order(1) -> order_item(N)` | 1번 주문 안에 `Americano 2개`, `Butter Croissant 1개`가 들어갈 수 있다. |
+| `menu_category(1) -> menu_item(N)` | `Coffee` 카테고리에 `Americano`, `Cold Brew`가 들어갈 수 있다. |
+| `menu_item(1) -> order_item(N)` | `Americano` 메뉴는 여러 주문상세에 반복해서 등장할 수 있다. |
+
+특히 `order_item`은 주문과 메뉴 사이의 다대다 관계를 풀어주는 테이블이다.
+
+```text
+cafe_order -> order_item -> menu_item
+```
+
+주문 하나에는 메뉴가 여러 개 들어갈 수 있고, 메뉴 하나는 여러 주문에서 팔릴 수 있기 때문에 중간에 `order_item`이 필요하다.
+
+#### 컬럼 타입을 왜 그렇게 선택했는지 설명할 수 있는가?
+
+설명할 수 있다. SQLite 기준으로 과제에 필요한 기본 타입을 사용했다.
+
+| 컬럼 예시 | 타입 | 선택 이유 |
+| --- | --- | --- |
+| `customer_id`, `order_id` | `INTEGER` | 번호이므로 정수 타입이 적합하다. |
+| `name`, `email`, `item_name` | `TEXT` | 이름과 이메일은 문자 데이터다. |
+| `price`, `quantity`, `unit_price` | `INTEGER` | 가격과 수량은 계산해야 하므로 정수로 저장했다. |
+| `joined_date`, `order_datetime` | `TEXT` | SQLite에서는 날짜를 문자열 형태로 저장할 수 있고, `YYYY-MM-DD` 형식이면 정렬과 비교가 쉽다. |
+| `order_status` | `TEXT` | `PAID`, `COMPLETED`, `CANCELED` 같은 상태값은 문자로 표현한다. |
+
+가격을 `INTEGER`로 둔 이유는 원 단위 금액을 다루기 때문이다. 예를 들어 4500원은 소수점이 필요 없으므로 정수로 충분하다.
+
+#### 인덱스를 어떤 컬럼에 걸었고, 왜 그 컬럼이어야 하는지 설명할 수 있는가?
+
+설명할 수 있다. `cafe_order.order_datetime`에 인덱스를 걸었다.
+
+```sql
+CREATE INDEX IF NOT EXISTS idx_cafe_order_order_datetime
+ON cafe_order(order_datetime);
+```
+
+주문 데이터는 보통 날짜 기준으로 자주 조회한다.
+
+```text
+최근 주문 보기
+특정 날짜 이후 주문 보기
+날짜순 정렬하기
+```
+
+그래서 주문 시간 컬럼인 `order_datetime`에 인덱스를 적용했다. Q13에서 `EXPLAIN QUERY PLAN`을 사용해 SQLite가 해당 인덱스를 사용할 수 있음을 확인했다.
+
+### 항목 3. 데이터베이스 개념 설명과 쿼리 결과 해석
+
+#### 데이터베이스가 엑셀과 무엇이 다른지, 왜 테이블을 나눠 저장하는지 설명할 수 있는가?
+
+설명할 수 있다. 엑셀은 한 시트에 데이터를 직접 나열하는 방식에 가깝고, 데이터베이스는 데이터를 여러 테이블로 나눈 뒤 관계를 통해 연결한다.
+
+예를 들어 엑셀 한 표에 모든 주문 정보를 넣으면 고객 이름, 이메일, 메뉴 이름, 카테고리 이름이 주문마다 반복된다. 같은 고객 이메일이 여러 번 반복되면 수정할 때 실수하기 쉽다.
+
+이 프로젝트는 고객 정보는 `customer`, 메뉴 정보는 `menu_item`, 주문 정보는 `cafe_order`, 주문상세는 `order_item`으로 나누었다. 이렇게 나누면 중복을 줄이고, FK로 데이터 관계를 안전하게 유지할 수 있다.
+
+#### PK와 FK의 역할을 구분하고, 1:N 관계가 데이터를 어떻게 연결하는지 ERD 기준으로 보여줄 수 있는가?
+
+설명할 수 있다. README 상단의 ERD 이미지(`outputs/db_diagram.png`)에 PK와 FK가 표시되어 있다.
+
+PK는 한 행을 구분하는 고유 번호다.
+
+```text
+customer.customer_id
+menu_item.menu_item_id
+cafe_order.order_id
+order_item.order_item_id
+```
+
+FK는 다른 테이블의 PK를 참조하는 연결 번호다.
+
+```text
+cafe_order.customer_id -> customer.customer_id
+order_item.order_id -> cafe_order.order_id
+order_item.menu_item_id -> menu_item.menu_item_id
+```
+
+예를 들어 `cafe_order.customer_id = 1`이면 1번 고객이 해당 주문을 했다는 뜻이다. 이 연결 덕분에 JOIN으로 주문과 고객 이름을 함께 조회할 수 있다.
+
+#### INNER JOIN과 LEFT JOIN의 차이를 실행 결과를 보며 짚어줄 수 있는가?
+
+설명할 수 있다.
+
+| JOIN 종류 | 사용 쿼리 | 의미 |
+| --- | --- | --- |
+| `INNER JOIN` | Q05, Q06, Q07 | 양쪽 테이블에 연결되는 데이터가 있을 때만 결과에 나온다. |
+| `LEFT JOIN` | Q08 | 왼쪽 테이블의 데이터는 우선 모두 남기고, 오른쪽 데이터가 있으면 붙인다. |
+
+Q05는 주문과 고객을 `INNER JOIN`한다.
+
+```sql
+INNER JOIN customer
+ON cafe_order.customer_id = customer.customer_id
+```
+
+주문에는 반드시 고객이 있으므로 주문과 고객이 연결된 결과만 나온다.
+
+Q08은 고객을 기준으로 `LEFT JOIN`한다.
+
+```sql
+FROM customer
+LEFT JOIN cafe_order
+ON customer.customer_id = cafe_order.customer_id
+```
+
+이 방식은 주문이 없는 고객도 결과에서 빠지지 않게 할 수 있다. 고객별 주문 횟수를 구할 때는 고객 목록을 기준으로 보는 것이 자연스럽기 때문에 `LEFT JOIN`을 사용했다.
+
+#### GROUP BY와 집계 함수(COUNT, SUM, AVG)가 어떻게 동작하는지 쿼리 결과를 보며 이야기할 수 있는가?
+
+설명할 수 있다.
+
+| 함수 | 사용 쿼리 | 동작 |
+| --- | --- | --- |
+| `COUNT` | Q08 | 고객별 주문 개수를 센다. |
+| `SUM` | Q09 | 주문별 총금액을 더한다. |
+| `SUM` | Q10 | 메뉴별 판매 수량을 더한다. |
+| `SUM` | Q11 | 메뉴별 매출을 더한다. |
+| `AVG` | Q12 | 전체 메뉴 평균 가격을 계산한다. |
+
+Q09의 핵심은 아래 부분이다.
+
+```sql
+GROUP BY order_id
+SUM(quantity * unit_price)
+```
+
+같은 주문 번호끼리 묶은 뒤, 각 메뉴 줄의 `수량 * 가격`을 모두 더해서 주문별 총금액을 구한다.
+
+Q12의 핵심은 아래 부분이다.
+
+```sql
+SELECT AVG(price)
+FROM menu_item
+```
+
+전체 메뉴의 평균 가격을 구한 뒤, 그 평균보다 비싼 메뉴만 조회한다.
+
+### 항목 4. 복잡했던 쿼리와 문제 해결 설명
+
+#### 작성한 쿼리 중 가장 복잡했던 쿼리를 선택하고, 어떻게 풀었는지 단계별로 설명할 수 있는가?
+
+가장 복잡했던 쿼리로 Q15를 선택할 수 있다. Q15는 단순 삭제가 아니라 삭제 전후를 비교하고, `ON DELETE CASCADE`까지 확인하기 때문이다.
+
+```sql
+BEGIN;
+SELECT 'before_delete' AS phase, COUNT(*) AS canceled_order_items
+FROM order_item
+WHERE order_id = 10;
+DELETE FROM cafe_order
+WHERE order_id = 10 AND order_status = 'CANCELED';
+SELECT 'after_delete' AS phase, COUNT(*) AS canceled_order_items
+FROM order_item
+WHERE order_id = 10;
+ROLLBACK;
+```
+
+동작 단계는 다음과 같다.
+
+1. `BEGIN`으로 실습용 트랜잭션을 시작한다.
+2. 삭제 전에 10번 주문의 주문상세가 몇 개 있는지 `COUNT(*)`로 센다.
+3. `DELETE`로 `CANCELED` 상태인 10번 주문을 삭제한다.
+4. 삭제 후 다시 10번 주문의 주문상세 개수를 센다.
+5. 결과가 `before_delete = 1`, `after_delete = 0`이면 주문 삭제 시 주문상세도 함께 삭제된 것이다.
+6. `ROLLBACK`으로 실제 데이터는 원래 상태로 되돌린다.
+
+이 쿼리가 의미 있는 이유는 FK에 아래 조건이 있기 때문이다.
+
+```sql
+FOREIGN KEY (order_id) REFERENCES cafe_order(order_id) ON DELETE CASCADE
+```
+
+`ON DELETE CASCADE`는 부모 데이터인 주문이 삭제될 때, 자식 데이터인 주문상세도 함께 삭제되도록 하는 규칙이다.
+
+#### 미션 수행 중 가장 어려웠던 부분과 해결 방법을 구체적으로 말할 수 있는가?
+
+가장 어려웠던 부분은 `order_item`의 역할을 이해하는 것이었다.
+
+처음에는 주문 테이블에 메뉴까지 바로 넣으면 될 것처럼 보일 수 있다. 하지만 실제 주문은 한 주문에 여러 메뉴가 들어간다.
+
+```text
+1번 주문
+- Americano 2개
+- Butter Croissant 1개
+```
+
+이 구조를 `cafe_order` 한 행에 모두 넣으면 메뉴가 늘어날 때마다 컬럼이 늘어나거나, 한 칸에 여러 값을 넣어야 해서 검색과 집계가 어려워진다.
+
+해결 방법은 주문 자체와 주문 안의 메뉴 목록을 분리하는 것이었다.
+
+```text
+cafe_order: 주문 한 건
+order_item: 주문 안의 메뉴 한 줄
+```
+
+이렇게 나누면 주문별 총금액(Q09), 메뉴별 판매 수량(Q10), 메뉴별 매출(Q11)을 SQL로 쉽게 계산할 수 있다.
+
+### 항목 5. 보너스 과제 여부
+
+이번 제출물은 사용자의 요청에 따라 보너스 과제는 제외했다.
+
+따라서 보너스 크레딧 항목은 수행하지 않았고, 필수 평가 기준을 충족하는 데 집중했다.
+
 ## 요구사항별 상세 설명
 
 ### 1. 최소 4개 테이블 생성
