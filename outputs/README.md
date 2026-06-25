@@ -27,6 +27,7 @@ sqlite3 outputs/cafe_order.sqlite < outputs/03_queries.sql
 - `02_insert_sample_data.sql`: 샘플 데이터 입력
 - `03_queries.sql`: 핵심 SQL 쿼리 15개
 - `query_results/queries_result.txt`: 15개 쿼리 실행 결과 텍스트
+- `query_results/screenshots/`: 쿼리별 실행 결과 캡처 이미지 15개
 - `cafe_order.sqlite`: 위 SQL을 실행해 만든 SQLite DB 파일
 - `db_diagram.png`: 테이블 관계를 보여주는 ERD 이미지
 
@@ -181,7 +182,7 @@ cafe_order -> order_item -> menu_item
 | 서브쿼리 1개 이상 | Q12 |
 | UPDATE, DELETE | Q14, Q15 |
 | 인덱스 1개 이상 | Q13에서 `idx_cafe_order_order_datetime` 생성 |
-| 실행 결과 자료 | `query_results/queries_result.txt`에 쿼리별 결과 저장 |
+| 실행 결과 자료 | `query_results/queries_result.txt`와 `query_results/screenshots/`에 쿼리별 결과 저장 |
 | ERD 이미지 | `db_diagram.png` 생성 |
 
 ## 인덱스 적용 이유
