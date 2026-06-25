@@ -37,6 +37,18 @@ sqlite3 outputs/cafe_order.sqlite
 .read outputs/03_queries.sql
 ```
 
+`03_queries.sql`을 실행하면 각 쿼리가 아래 형식으로 출력된다.
+
+```text
+Q01. 쿼리 설명
+실행 쿼리:
+SELECT ...
+실행 결과:
+결과 테이블
+```
+
+따라서 터미널에서 실행해도 쿼리 번호, 실제 쿼리문, 실행 결과를 한 번에 확인할 수 있다.
+
 터미널에서 한 번에 실행하려면 아래처럼 실행한다.
 
 ```bash
