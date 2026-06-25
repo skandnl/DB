@@ -1,0 +1,316 @@
+.read outputs/03_queries.sql
+-- Cafe order core queries for SQLite
+-- Run after 01_schema.sql and 02_insert_sample_data.sql.
+
+PRAGMA foreign_keys = ON;
+
+-- Q01. 기본 조회: 2026-03-01 이후 가입한 고객을 최근 가입순으로 확인한다.
+SELECT customer_id, name, email, joined_date
+FROM customer
+WHERE joined_date >= '2026-03-01'
+ORDER BY joined_date DESC;
+┌─────────────┬─────────────┬─────────────────────────┬─────────────┐
+│ customer_id │    name     │          email          │ joined_date │
+├─────────────┼─────────────┼─────────────────────────┼─────────────┤
+│ 10          │ Seo Jun     │ jun.seo@example.com     │ 2026-05-15  │
+│ 9           │ Oh Jisoo    │ jisoo.oh@example.com    │ 2026-05-02  │
+│ 8           │ Han Sora    │ sora.han@example.com    │ 2026-04-24  │
+│ 7           │ Yoon Taemin │ taemin.yoon@example.com │ 2026-04-11  │
+│ 6           │ Kang Yujin  │ yujin.kang@example.com  │ 2026-03-09  │
+│ 5           │ Jung Doyeon │ doyeon.jung@example.com │ 2026-03-01  │
+└─────────────┴─────────────┴─────────────────────────┴─────────────┘
+
+-- Q02. 기본 조회: 가격이 6000원 이상인 메뉴를 비싼 순서로 최대 5개 확인한다.
+SELECT menu_item_id, item_name, price
+FROM menu_item
+WHERE price >= 6000
+ORDER BY price DESC
+LIMIT 5;
+┌──────────────┬─────────────────────┬───────┐
+│ menu_item_id │      item_name      │ price │
+├──────────────┼─────────────────────┼───────┤
+│ 12           │ Reusable Tumbler    │ 15000 │
+│ 10           │ Chicken Sandwich    │ 7900  │
+│ 9            │ Basque Cheesecake   │ 6800  │
+│ 7            │ Strawberry Smoothie │ 6500  │
+│ 11           │ Peach Iced Tea      │ 6200  │
+└──────────────┴─────────────────────┴───────┘
+
+-- Q03. 기본 조회: 완료된 주문을 최신순으로 확인한다.
+SELECT order_id, customer_id, order_datetime, order_status
+FROM cafe_order
+WHERE order_status = 'COMPLETED'
+ORDER BY order_datetime DESC;
+┌──────────┬─────────────┬─────────────────────┬──────────────┐
+│ order_id │ customer_id │   order_datetime    │ order_status │
+├──────────┼─────────────┼─────────────────────┼──────────────┤
+│ 12       │ 2           │ 2026-06-06 15:35:00 │ COMPLETED    │
+│ 11       │ 1           │ 2026-06-06 08:20:00 │ COMPLETED    │
+│ 9        │ 9           │ 2026-06-05 16:25:00 │ COMPLETED    │
+│ 8        │ 8           │ 2026-06-04 13:50:00 │ COMPLETED    │
+│ 5        │ 5           │ 2026-06-03 10:05:00 │ COMPLETED    │
+│ 4        │ 4           │ 2026-06-02 14:20:00 │ COMPLETED    │
+│ 3        │ 3           │ 2026-06-02 08:45:00 │ COMPLETED    │
+│ 2        │ 2           │ 2026-06-01 12:30:00 │ COMPLETED    │
+│ 1        │ 1           │ 2026-06-01 09:10:00 │ COMPLETED    │
+└──────────┴─────────────┴─────────────────────┴──────────────┘
+
+-- Q04. 기본 조회: 이름에 'Lee'가 들어간 고객을 검색한다.
+SELECT customer_id, name, email
+FROM customer
+WHERE name LIKE '%Lee%'
+ORDER BY name;
+┌─────────────┬─────────────┬─────────────────────────┐
+│ customer_id │    name     │          email          │
+├─────────────┼─────────────┼─────────────────────────┤
+│ 2           │ Lee Seoyeon │ seoyeon.lee@example.com │
+└─────────────┴─────────────┴─────────────────────────┘
+
+-- Q05. INNER JOIN: 주문에 고객 이름을 붙여서 확인한다.
+SELECT cafe_order.order_id,
+       customer.name,
+       cafe_order.order_datetime,
+       cafe_order.order_status
+FROM cafe_order
+INNER JOIN customer
+ON cafe_order.customer_id = customer.customer_id
+ORDER BY cafe_order.order_datetime;
+┌──────────┬─────────────┬─────────────────────┬──────────────┐
+│ order_id │    name     │   order_datetime    │ order_status │
+├──────────┼─────────────┼─────────────────────┼──────────────┤
+│ 1        │ Kim Minjun  │ 2026-06-01 09:10:00 │ COMPLETED    │
+│ 2        │ Lee Seoyeon │ 2026-06-01 12:30:00 │ COMPLETED    │
+│ 3        │ Park Jiho   │ 2026-06-02 08:45:00 │ COMPLETED    │
+│ 4        │ Choi Hana   │ 2026-06-02 14:20:00 │ COMPLETED    │
+│ 5        │ Jung Doyeon │ 2026-06-03 10:05:00 │ COMPLETED    │
+│ 6        │ Kang Yujin  │ 2026-06-03 18:40:00 │ PAID         │
+│ 7        │ Yoon Taemin │ 2026-06-04 11:15:00 │ PAID         │
+│ 8        │ Han Sora    │ 2026-06-04 13:50:00 │ COMPLETED    │
+│ 9        │ Oh Jisoo    │ 2026-06-05 16:25:00 │ COMPLETED    │
+│ 10       │ Seo Jun     │ 2026-06-05 19:05:00 │ CANCELED     │
+│ 11       │ Kim Minjun  │ 2026-06-06 08:20:00 │ COMPLETED    │
+│ 12       │ Lee Seoyeon │ 2026-06-06 15:35:00 │ COMPLETED    │
+└──────────┴─────────────┴─────────────────────┴──────────────┘
+
+-- Q06. INNER JOIN: 주문상세에 메뉴 이름을 붙여서 확인한다.
+SELECT order_item.order_id,
+       menu_item.item_name,
+       order_item.quantity,
+       order_item.unit_price
+FROM order_item
+INNER JOIN menu_item
+ON order_item.menu_item_id = menu_item.menu_item_id
+ORDER BY order_item.order_id, order_item.order_item_id;
+┌──────────┬─────────────────────┬──────────┬────────────┐
+│ order_id │      item_name      │ quantity │ unit_price │
+├──────────┼─────────────────────┼──────────┼────────────┤
+│ 1        │ Americano           │ 2        │ 4500       │
+│ 1        │ Butter Croissant    │ 1        │ 4200       │
+│ 2        │ Cafe Latte          │ 1        │ 5200       │
+│ 2        │ Basque Cheesecake   │ 2        │ 6800       │
+│ 3        │ Vanilla Latte       │ 1        │ 5800       │
+│ 3        │ Earl Grey Tea       │ 1        │ 4800       │
+│ 4        │ Lemon Ade           │ 2        │ 6000       │
+│ 5        │ Chicken Sandwich    │ 1        │ 7900       │
+│ 5        │ Americano           │ 1        │ 4500       │
+│ 6        │ Strawberry Smoothie │ 2        │ 6500       │
+│ 7        │ Cold Brew           │ 1        │ 5000       │
+│ 7        │ Butter Croissant    │ 2        │ 4200       │
+│ 8        │ Peach Iced Tea      │ 1        │ 6200       │
+│ 8        │ Basque Cheesecake   │ 1        │ 6800       │
+│ 9        │ Reusable Tumbler    │ 1        │ 15000      │
+│ 9        │ Cafe Latte          │ 2        │ 5200       │
+│ 10       │ Lemon Ade           │ 1        │ 6000       │
+│ 11       │ Americano           │ 1        │ 4500       │
+│ 11       │ Chicken Sandwich    │ 1        │ 7900       │
+│ 12       │ Vanilla Latte       │ 2        │ 5800       │
+└──────────┴─────────────────────┴──────────┴────────────┘
+
+-- Q07. INNER JOIN: 메뉴가 어떤 카테고리에 속하는지 확인한다.
+SELECT menu_category.category_name,
+       menu_item.item_name,
+       menu_item.price
+FROM menu_item
+INNER JOIN menu_category
+ON menu_item.category_id = menu_category.category_id
+ORDER BY menu_category.category_name, menu_item.item_name;
+┌────────────────┬─────────────────────┬───────┐
+│ category_name  │      item_name      │ price │
+├────────────────┼─────────────────────┼───────┤
+│ Ade            │ Lemon Ade           │ 6000  │
+│ Bread          │ Butter Croissant    │ 4200  │
+│ Cake           │ Basque Cheesecake   │ 6800  │
+│ Coffee         │ Americano           │ 4500  │
+│ Coffee         │ Cold Brew           │ 5000  │
+│ Goods          │ Reusable Tumbler    │ 15000 │
+│ Latte          │ Cafe Latte          │ 5200  │
+│ Latte          │ Vanilla Latte       │ 5800  │
+│ Sandwich       │ Chicken Sandwich    │ 7900  │
+│ Seasonal Drink │ Peach Iced Tea      │ 6200  │
+│ Smoothie       │ Strawberry Smoothie │ 6500  │
+│ Tea            │ Earl Grey Tea       │ 4800  │
+└────────────────┴─────────────────────┴───────┘
+
+-- Q08. LEFT JOIN: 주문이 없는 고객도 포함해 고객별 주문 횟수를 확인한다.
+SELECT customer.customer_id,
+       customer.name,
+       COUNT(cafe_order.order_id) AS order_count
+FROM customer
+LEFT JOIN cafe_order
+ON customer.customer_id = cafe_order.customer_id
+GROUP BY customer.customer_id, customer.name
+ORDER BY order_count DESC, customer.customer_id;
+┌─────────────┬─────────────┬─────────────┐
+│ customer_id │    name     │ order_count │
+├─────────────┼─────────────┼─────────────┤
+│ 1           │ Kim Minjun  │ 2           │
+│ 2           │ Lee Seoyeon │ 2           │
+│ 3           │ Park Jiho   │ 1           │
+│ 4           │ Choi Hana   │ 1           │
+│ 5           │ Jung Doyeon │ 1           │
+│ 6           │ Kang Yujin  │ 1           │
+│ 7           │ Yoon Taemin │ 1           │
+│ 8           │ Han Sora    │ 1           │
+│ 9           │ Oh Jisoo    │ 1           │
+│ 10          │ Seo Jun     │ 1           │
+└─────────────┴─────────────┴─────────────┘
+
+-- Q09. 집계: 주문별 총금액을 계산한다.
+SELECT order_id, SUM(quantity * unit_price) AS order_total
+FROM order_item
+GROUP BY order_id
+ORDER BY order_total DESC;
+┌──────────┬─────────────┐
+│ order_id │ order_total │
+├──────────┼─────────────┤
+│ 9        │ 25400       │
+│ 2        │ 18800       │
+│ 7        │ 13400       │
+│ 1        │ 13200       │
+│ 8        │ 13000       │
+│ 6        │ 13000       │
+│ 11       │ 12400       │
+│ 5        │ 12400       │
+│ 4        │ 12000       │
+│ 12       │ 11600       │
+│ 3        │ 10600       │
+│ 10       │ 6000        │
+└──────────┴─────────────┘
+
+-- Q10. 집계: 메뉴별로 몇 개 팔렸는지 계산한다.
+SELECT menu_item.item_name,
+       SUM(order_item.quantity) AS sold_quantity
+FROM order_item
+INNER JOIN menu_item
+ON order_item.menu_item_id = menu_item.menu_item_id
+GROUP BY menu_item.menu_item_id, menu_item.item_name
+ORDER BY sold_quantity DESC;
+┌─────────────────────┬───────────────┐
+│      item_name      │ sold_quantity │
+├─────────────────────┼───────────────┤
+│ Americano           │ 4             │
+│ Cafe Latte          │ 3             │
+│ Vanilla Latte       │ 3             │
+│ Lemon Ade           │ 3             │
+│ Butter Croissant    │ 3             │
+│ Basque Cheesecake   │ 3             │
+│ Strawberry Smoothie │ 2             │
+│ Chicken Sandwich    │ 2             │
+│ Cold Brew           │ 1             │
+│ Earl Grey Tea       │ 1             │
+│ Peach Iced Tea      │ 1             │
+│ Reusable Tumbler    │ 1             │
+└─────────────────────┴───────────────┘
+
+-- Q11. 집계: 메뉴별 매출을 계산한다.
+SELECT menu_item.item_name,
+       SUM(order_item.quantity * order_item.unit_price) AS sales_amount
+FROM order_item
+INNER JOIN menu_item
+ON order_item.menu_item_id = menu_item.menu_item_id
+GROUP BY menu_item.menu_item_id, menu_item.item_name
+ORDER BY sales_amount DESC;
+┌─────────────────────┬──────────────┐
+│      item_name      │ sales_amount │
+├─────────────────────┼──────────────┤
+│ Basque Cheesecake   │ 20400        │
+│ Americano           │ 18000        │
+│ Lemon Ade           │ 18000        │
+│ Vanilla Latte       │ 17400        │
+│ Chicken Sandwich    │ 15800        │
+│ Cafe Latte          │ 15600        │
+│ Reusable Tumbler    │ 15000        │
+│ Strawberry Smoothie │ 13000        │
+│ Butter Croissant    │ 12600        │
+│ Peach Iced Tea      │ 6200         │
+│ Cold Brew           │ 5000         │
+│ Earl Grey Tea       │ 4800         │
+└─────────────────────┴──────────────┘
+
+-- Q12. 서브쿼리: 평균 메뉴 가격보다 비싼 메뉴를 찾는다.
+SELECT item_name, price
+FROM menu_item
+WHERE price > (
+    SELECT AVG(price)
+    FROM menu_item
+)
+ORDER BY price DESC;
+┌─────────────────────┬───────┐
+│      item_name      │ price │
+├─────────────────────┼───────┤
+│ Reusable Tumbler    │ 15000 │
+│ Chicken Sandwich    │ 7900  │
+│ Basque Cheesecake   │ 6800  │
+│ Strawberry Smoothie │ 6500  │
+└─────────────────────┴───────┘
+
+-- Q13. 인덱스: 주문 일시 검색과 정렬이 자주 발생하므로 order_datetime에 인덱스를 만든다.
+CREATE INDEX IF NOT EXISTS idx_cafe_order_order_datetime
+ON cafe_order(order_datetime);
+
+-- Q13 확인: SQLite 전용 EXPLAIN QUERY PLAN으로 인덱스 사용 가능성을 확인한다.
+EXPLAIN QUERY PLAN
+SELECT order_id, customer_id, order_datetime
+FROM cafe_order
+WHERE order_datetime >= '2026-06-03 00:00:00'
+ORDER BY order_datetime;
+QUERY PLAN
+`--SEARCH cafe_order USING INDEX idx_cafe_order_order_datetime (order_datetime>?)
+
+-- Q14. UPDATE: 6번 주문의 상태를 완료로 바꾸고 확인한다.
+BEGIN;
+UPDATE cafe_order
+SET order_status = 'COMPLETED'
+WHERE order_id = 6;
+SELECT order_id, order_status
+FROM cafe_order
+WHERE order_id = 6;
+┌──────────┬──────────────┐
+│ order_id │ order_status │
+├──────────┼──────────────┤
+│ 6        │ COMPLETED    │
+└──────────┴──────────────┘
+ROLLBACK;
+
+-- Q15. DELETE: 취소 주문을 삭제하면 주문 상세도 함께 삭제되는지 확인한다.
+BEGIN;
+SELECT 'before_delete' AS phase, COUNT(*) AS canceled_order_items
+FROM order_item
+WHERE order_id = 10;
+┌───────────────┬──────────────────────┐
+│     phase     │ canceled_order_items │
+├───────────────┼──────────────────────┤
+│ before_delete │ 1                    │
+└───────────────┴──────────────────────┘
+DELETE FROM cafe_order
+WHERE order_id = 10 AND order_status = 'CANCELED';
+SELECT 'after_delete' AS phase, COUNT(*) AS canceled_order_items
+FROM order_item
+WHERE order_id = 10;
+┌──────────────┬──────────────────────┐
+│    phase     │ canceled_order_items │
+├──────────────┼──────────────────────┤
+│ after_delete │ 0                    │
+└──────────────┴──────────────────────┘
+ROLLBACK;
+.output stdout
