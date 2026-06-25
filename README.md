@@ -376,6 +376,371 @@ after_delete: 0
 
 이 결과는 주문이 삭제될 때 주문상세도 같이 삭제된다는 뜻이다.
 
+## 각 쿼리문 동작 설명
+
+### Q01. 2026-03-01 이후 가입한 고객 조회
+
+```sql
+SELECT customer_id, name, email, joined_date
+FROM customer
+WHERE joined_date >= '2026-03-01'
+ORDER BY joined_date DESC;
+```
+
+이 쿼리는 `customer` 테이블에서 고객 정보를 조회한다.
+
+동작 순서는 다음과 같다.
+
+1. `FROM customer`로 고객 테이블을 조회 대상으로 정한다.
+2. `WHERE joined_date >= '2026-03-01'`로 2026년 3월 1일 이후 가입한 고객만 남긴다.
+3. `ORDER BY joined_date DESC`로 가입일이 늦은 고객부터 정렬한다.
+4. `SELECT customer_id, name, email, joined_date`로 필요한 컬럼만 보여준다.
+
+즉 “최근 가입 고객 목록”을 확인하는 쿼리다.
+
+### Q02. 6000원 이상 메뉴 중 비싼 메뉴 5개 조회
+
+```sql
+SELECT menu_item_id, item_name, price
+FROM menu_item
+WHERE price >= 6000
+ORDER BY price DESC
+LIMIT 5;
+```
+
+이 쿼리는 `menu_item` 테이블에서 비싼 메뉴를 조회한다.
+
+동작 순서는 다음과 같다.
+
+1. `FROM menu_item`으로 메뉴 테이블을 조회한다.
+2. `WHERE price >= 6000`으로 가격이 6000원 이상인 메뉴만 고른다.
+3. `ORDER BY price DESC`로 가격이 높은 메뉴부터 정렬한다.
+4. `LIMIT 5`로 결과를 5개까지만 보여준다.
+
+이 쿼리는 기본 조회 조건인 `WHERE`, 정렬 조건인 `ORDER BY`, 개수 제한 조건인 `LIMIT`을 모두 보여준다.
+
+### Q03. 완료된 주문 조회
+
+```sql
+SELECT order_id, customer_id, order_datetime, order_status
+FROM cafe_order
+WHERE order_status = 'COMPLETED'
+ORDER BY order_datetime DESC;
+```
+
+이 쿼리는 `cafe_order` 테이블에서 완료된 주문만 조회한다.
+
+동작 순서는 다음과 같다.
+
+1. `FROM cafe_order`로 주문 테이블을 조회한다.
+2. `WHERE order_status = 'COMPLETED'`로 완료 상태인 주문만 남긴다.
+3. `ORDER BY order_datetime DESC`로 최근 주문부터 정렬한다.
+4. 주문 번호, 고객 번호, 주문 시간, 주문 상태를 보여준다.
+
+즉 “완료된 주문 내역”을 확인하는 쿼리다.
+
+### Q04. 이름에 Lee가 들어간 고객 검색
+
+```sql
+SELECT customer_id, name, email
+FROM customer
+WHERE name LIKE '%Lee%'
+ORDER BY name;
+```
+
+이 쿼리는 고객 이름을 검색한다.
+
+동작 순서는 다음과 같다.
+
+1. `FROM customer`로 고객 테이블을 조회한다.
+2. `WHERE name LIKE '%Lee%'`로 이름에 `Lee`가 포함된 고객만 찾는다.
+3. `ORDER BY name`으로 이름순 정렬한다.
+4. 고객 번호, 이름, 이메일을 보여준다.
+
+`LIKE '%Lee%'`에서 `%`는 앞뒤에 어떤 글자가 와도 된다는 뜻이다. 그래서 이름 전체가 정확히 `Lee`가 아니어도 `Lee Seoyeon`처럼 `Lee`가 포함되면 검색된다.
+
+### Q05. 주문에 고객 이름 붙이기
+
+```sql
+SELECT cafe_order.order_id,
+       customer.name,
+       cafe_order.order_datetime,
+       cafe_order.order_status
+FROM cafe_order
+INNER JOIN customer
+ON cafe_order.customer_id = customer.customer_id
+ORDER BY cafe_order.order_datetime;
+```
+
+이 쿼리는 주문 정보와 고객 정보를 연결한다.
+
+`cafe_order`에는 고객 이름이 직접 저장되어 있지 않고 `customer_id`만 있다. 그래서 고객 이름을 보려면 `customer` 테이블과 연결해야 한다.
+
+동작 순서는 다음과 같다.
+
+1. `FROM cafe_order`로 주문 테이블을 기준으로 잡는다.
+2. `INNER JOIN customer`로 고객 테이블을 연결한다.
+3. `ON cafe_order.customer_id = customer.customer_id`로 두 테이블의 같은 고객 번호끼리 연결한다.
+4. 주문 번호, 고객 이름, 주문 시간, 주문 상태를 보여준다.
+
+즉 “주문 번호만 보는 것이 아니라, 누가 주문했는지까지 같이 보는 쿼리”다.
+
+### Q06. 주문상세에 메뉴 이름 붙이기
+
+```sql
+SELECT order_item.order_id,
+       menu_item.item_name,
+       order_item.quantity,
+       order_item.unit_price
+FROM order_item
+INNER JOIN menu_item
+ON order_item.menu_item_id = menu_item.menu_item_id
+ORDER BY order_item.order_id, order_item.order_item_id;
+```
+
+이 쿼리는 주문상세와 메뉴 정보를 연결한다.
+
+`order_item`에는 메뉴 이름이 직접 저장되어 있지 않고 `menu_item_id`만 있다. 그래서 메뉴 이름을 보려면 `menu_item` 테이블과 연결해야 한다.
+
+동작 순서는 다음과 같다.
+
+1. `FROM order_item`으로 주문상세 테이블을 조회한다.
+2. `INNER JOIN menu_item`으로 메뉴 테이블을 연결한다.
+3. `ON order_item.menu_item_id = menu_item.menu_item_id`로 같은 메뉴 번호끼리 연결한다.
+4. 주문 번호, 메뉴 이름, 수량, 주문 당시 가격을 보여준다.
+
+즉 “각 주문에 어떤 메뉴가 몇 개 들어갔는지” 확인하는 쿼리다.
+
+### Q07. 메뉴가 어떤 카테고리에 속하는지 확인
+
+```sql
+SELECT menu_category.category_name,
+       menu_item.item_name,
+       menu_item.price
+FROM menu_item
+INNER JOIN menu_category
+ON menu_item.category_id = menu_category.category_id
+ORDER BY menu_category.category_name, menu_item.item_name;
+```
+
+이 쿼리는 메뉴와 카테고리를 연결한다.
+
+동작 순서는 다음과 같다.
+
+1. `FROM menu_item`으로 메뉴 테이블을 조회한다.
+2. `INNER JOIN menu_category`로 카테고리 테이블을 연결한다.
+3. `ON menu_item.category_id = menu_category.category_id`로 같은 카테고리 번호끼리 연결한다.
+4. 카테고리 이름, 메뉴 이름, 가격을 보여준다.
+5. 카테고리 이름과 메뉴 이름 기준으로 정렬한다.
+
+즉 “Americano가 Coffee에 속한다”처럼 메뉴의 분류를 확인하는 쿼리다.
+
+### Q08. 고객별 주문 횟수 조회
+
+```sql
+SELECT customer.customer_id,
+       customer.name,
+       COUNT(cafe_order.order_id) AS order_count
+FROM customer
+LEFT JOIN cafe_order
+ON customer.customer_id = cafe_order.customer_id
+GROUP BY customer.customer_id, customer.name
+ORDER BY order_count DESC, customer.customer_id;
+```
+
+이 쿼리는 고객마다 주문을 몇 번 했는지 계산한다.
+
+동작 순서는 다음과 같다.
+
+1. `FROM customer`로 고객 테이블을 기준으로 잡는다.
+2. `LEFT JOIN cafe_order`로 주문 테이블을 연결한다.
+3. `ON customer.customer_id = cafe_order.customer_id`로 고객과 주문을 연결한다.
+4. `GROUP BY customer.customer_id, customer.name`으로 고객별로 묶는다.
+5. `COUNT(cafe_order.order_id)`로 고객별 주문 개수를 센다.
+6. `ORDER BY order_count DESC`로 주문 횟수가 많은 고객부터 보여준다.
+
+여기서 `LEFT JOIN`을 사용한 이유는 고객을 기준으로 결과를 보여주기 위해서다. 주문이 없는 고객도 고객 목록에서 빠지지 않게 할 수 있다.
+
+### Q09. 주문별 총금액 계산
+
+```sql
+SELECT order_id, SUM(quantity * unit_price) AS order_total
+FROM order_item
+GROUP BY order_id
+ORDER BY order_total DESC;
+```
+
+이 쿼리는 주문 하나의 총금액을 계산한다.
+
+동작 순서는 다음과 같다.
+
+1. `FROM order_item`으로 주문상세 테이블을 조회한다.
+2. `quantity * unit_price`로 각 메뉴 줄의 금액을 계산한다.
+3. `GROUP BY order_id`로 같은 주문 번호끼리 묶는다.
+4. `SUM(quantity * unit_price)`로 주문별 총금액을 계산한다.
+5. `ORDER BY order_total DESC`로 총금액이 큰 주문부터 보여준다.
+
+예를 들어 한 주문에 아메리카노 2개와 크루아상 1개가 있으면, 두 줄의 금액을 더해서 주문 총금액을 만든다.
+
+### Q10. 메뉴별 판매 수량 계산
+
+```sql
+SELECT menu_item.item_name,
+       SUM(order_item.quantity) AS sold_quantity
+FROM order_item
+INNER JOIN menu_item
+ON order_item.menu_item_id = menu_item.menu_item_id
+GROUP BY menu_item.menu_item_id, menu_item.item_name
+ORDER BY sold_quantity DESC;
+```
+
+이 쿼리는 메뉴별로 총 몇 개 팔렸는지 계산한다.
+
+동작 순서는 다음과 같다.
+
+1. `FROM order_item`으로 주문상세 테이블을 조회한다.
+2. `INNER JOIN menu_item`으로 메뉴 이름을 가져온다.
+3. `GROUP BY menu_item.menu_item_id, menu_item.item_name`으로 메뉴별로 묶는다.
+4. `SUM(order_item.quantity)`로 각 메뉴의 총 판매 수량을 더한다.
+5. `ORDER BY sold_quantity DESC`로 많이 팔린 메뉴부터 보여준다.
+
+즉 “가장 많이 팔린 메뉴가 무엇인지” 확인할 수 있다.
+
+### Q11. 메뉴별 매출 계산
+
+```sql
+SELECT menu_item.item_name,
+       SUM(order_item.quantity * order_item.unit_price) AS sales_amount
+FROM order_item
+INNER JOIN menu_item
+ON order_item.menu_item_id = menu_item.menu_item_id
+GROUP BY menu_item.menu_item_id, menu_item.item_name
+ORDER BY sales_amount DESC;
+```
+
+이 쿼리는 메뉴별 매출을 계산한다.
+
+동작 순서는 다음과 같다.
+
+1. `FROM order_item`으로 주문상세 테이블을 조회한다.
+2. `INNER JOIN menu_item`으로 메뉴 이름을 가져온다.
+3. `quantity * unit_price`로 한 줄의 판매 금액을 계산한다.
+4. `GROUP BY menu_item.menu_item_id, menu_item.item_name`으로 메뉴별로 묶는다.
+5. `SUM(order_item.quantity * order_item.unit_price)`로 메뉴별 총매출을 계산한다.
+6. `ORDER BY sales_amount DESC`로 매출이 높은 메뉴부터 보여준다.
+
+Q10이 “몇 개 팔렸는지”라면, Q11은 “얼마를 벌었는지”를 보는 쿼리다.
+
+### Q12. 평균 메뉴 가격보다 비싼 메뉴 찾기
+
+```sql
+SELECT item_name, price
+FROM menu_item
+WHERE price > (
+    SELECT AVG(price)
+    FROM menu_item
+)
+ORDER BY price DESC;
+```
+
+이 쿼리는 서브쿼리를 사용한다. 서브쿼리는 괄호 안에 들어 있는 작은 쿼리다.
+
+동작 순서는 다음과 같다.
+
+1. 안쪽 쿼리 `SELECT AVG(price) FROM menu_item`이 전체 메뉴 평균 가격을 계산한다.
+2. 바깥 쿼리에서 `WHERE price > (...)`로 평균 가격보다 비싼 메뉴만 남긴다.
+3. `ORDER BY price DESC`로 비싼 메뉴부터 정렬한다.
+
+즉 “전체 평균보다 비싼 메뉴만 보여줘”라는 요구를 SQL로 표현한 것이다.
+
+### Q13. 주문 시간 인덱스 생성과 사용 확인
+
+```sql
+CREATE INDEX IF NOT EXISTS idx_cafe_order_order_datetime
+ON cafe_order(order_datetime);
+```
+
+이 쿼리는 `cafe_order` 테이블의 `order_datetime` 컬럼에 인덱스를 만든다.
+
+인덱스는 책의 목차처럼 데이터를 더 빨리 찾기 위한 장치다. 주문 데이터는 “최근 주문”, “특정 날짜 이후 주문”처럼 시간 기준으로 조회할 일이 많기 때문에 `order_datetime`에 인덱스를 적용했다.
+
+아래 쿼리는 인덱스가 사용될 수 있는지 확인한다.
+
+```sql
+EXPLAIN QUERY PLAN
+SELECT order_id, customer_id, order_datetime
+FROM cafe_order
+WHERE order_datetime >= '2026-06-03 00:00:00'
+ORDER BY order_datetime;
+```
+
+동작 순서는 다음과 같다.
+
+1. `WHERE order_datetime >= '2026-06-03 00:00:00'`로 특정 날짜 이후 주문을 찾는다.
+2. `ORDER BY order_datetime`으로 주문 시간을 기준으로 정렬한다.
+3. `EXPLAIN QUERY PLAN`으로 SQLite가 이 조회를 어떻게 처리하는지 보여준다.
+
+결과에 `USING INDEX idx_cafe_order_order_datetime`가 나오면 인덱스가 사용된다는 뜻이다.
+
+### Q14. 주문 상태 수정
+
+```sql
+BEGIN;
+UPDATE cafe_order
+SET order_status = 'COMPLETED'
+WHERE order_id = 6;
+SELECT order_id, order_status
+FROM cafe_order
+WHERE order_id = 6;
+ROLLBACK;
+```
+
+이 쿼리는 6번 주문의 상태를 `COMPLETED`로 바꿔본다.
+
+동작 순서는 다음과 같다.
+
+1. `BEGIN`으로 트랜잭션을 시작한다.
+2. `UPDATE cafe_order`로 주문 테이블을 수정 대상으로 정한다.
+3. `SET order_status = 'COMPLETED'`로 주문 상태를 완료로 바꾼다.
+4. `WHERE order_id = 6`으로 6번 주문만 수정한다.
+5. `SELECT`로 수정 결과를 확인한다.
+6. `ROLLBACK`으로 실습 전 상태로 되돌린다.
+
+`ROLLBACK`을 사용했기 때문에 수정 결과는 확인할 수 있지만 실제 데이터는 망가지지 않는다.
+
+### Q15. 취소 주문 삭제와 주문상세 자동 삭제 확인
+
+```sql
+BEGIN;
+SELECT 'before_delete' AS phase, COUNT(*) AS canceled_order_items
+FROM order_item
+WHERE order_id = 10;
+DELETE FROM cafe_order
+WHERE order_id = 10 AND order_status = 'CANCELED';
+SELECT 'after_delete' AS phase, COUNT(*) AS canceled_order_items
+FROM order_item
+WHERE order_id = 10;
+ROLLBACK;
+```
+
+이 쿼리는 취소된 10번 주문을 삭제해보고, 연결된 주문상세도 함께 삭제되는지 확인한다.
+
+동작 순서는 다음과 같다.
+
+1. `BEGIN`으로 트랜잭션을 시작한다.
+2. 첫 번째 `SELECT`로 삭제 전 10번 주문의 주문상세 개수를 센다.
+3. `DELETE FROM cafe_order WHERE order_id = 10 AND order_status = 'CANCELED'`로 취소된 10번 주문을 삭제한다.
+4. 두 번째 `SELECT`로 삭제 후 주문상세 개수를 다시 센다.
+5. `ROLLBACK`으로 실습 전 상태로 되돌린다.
+
+`order_item.order_id`에는 아래 FK 조건이 있다.
+
+```sql
+FOREIGN KEY (order_id) REFERENCES cafe_order(order_id) ON DELETE CASCADE
+```
+
+`ON DELETE CASCADE`는 부모 데이터가 삭제되면 연결된 자식 데이터도 함께 삭제한다는 뜻이다. 그래서 10번 주문을 삭제하면 10번 주문에 연결된 `order_item`도 함께 삭제된다.
+
 ## 핵심 쿼리 구성
 
 | 구분 | 쿼리 |
